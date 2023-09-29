@@ -3,26 +3,60 @@
     "clusters": {
       "http.api-1.default.dc1.internal.foo.consul": {
         "altStatName": "http.api-1.default.dc1.internal.foo.consul",
-        "endpointGroup": {
-          "dynamic": {
-            "config": {
-              "disablePanicThreshold": true
-            },
-            "outboundTls": {
-              "alpnProtocols": [
-                "consul~http"
-              ],
-              "outboundMesh": {
-                "identityKey": "test-identity",
-                "sni": "api-1.default.dc1.internal.foo.consul",
-                "validationContext": {
-                  "spiffeIds": [
-                    "spiffe://foo.consul/ap/default/ns/default/identity/api1-identity"
-                  ]
+        "failoverGroup": {
+          "config": {
+            "connectTimeout": "55s",
+            "useAltStatName": true
+          },
+          "endpointGroups": [
+            {
+              "dynamic": {
+                "config": {
+                  "connectTimeout": "55s",
+                  "disablePanicThreshold": true
+                },
+                "outboundTls": {
+                  "alpnProtocols": [
+                    "consul~http"
+                  ],
+                  "outboundMesh": {
+                    "identityKey": "test-identity",
+                    "sni": "api-1.default.dc1.internal.foo.consul",
+                    "validationContext": {
+                      "spiffeIds": [
+                        "spiffe://foo.consul/ap/default/ns/default/identity/api1-identity"
+                      ],
+                      "trustBundlePeerNameKey": "local"
+                    }
+                  }
                 }
               }
+            },
+            {
+              "dynamic": {
+                "config": {
+                  "connectTimeout": "5s",
+                  "disablePanicThreshold": true
+                },
+                "outboundTls": {
+                  "alpnProtocols": [
+                    "consul~http"
+                  ],
+                  "outboundMesh": {
+                    "identityKey": "test-identity",
+                    "sni": "backup-1.default.dc1.internal.foo.consul",
+                    "validationContext": {
+                      "spiffeIds": [
+                        "spiffe://foo.consul/ap/default/ns/default/identity/backup1-identity"
+                      ],
+                      "trustBundlePeerNameKey": "local"
+                    }
+                  }
+                }
+              },
+              "name": "failover-target~0~http.api-1.default.dc1.internal.foo.consul"
             }
-          }
+          ]
         },
         "name": "http.api-1.default.dc1.internal.foo.consul"
       },
@@ -31,6 +65,7 @@
         "endpointGroup": {
           "dynamic": {
             "config": {
+              "connectTimeout": "5s",
               "disablePanicThreshold": true
             },
             "outboundTls": {
@@ -40,7 +75,12 @@
               "outboundMesh": {
                 "identityKey": "test-identity",
                 "sni": "api-2.default.dc1.internal.foo.consul",
-                "validationContext": {}
+                "validationContext": {
+                  "spiffeIds": [
+                    "spiffe://foo.consul/ap/default/ns/default/identity/api2-identity"
+                  ],
+                  "trustBundlePeerNameKey": "local"
+                }
               }
             }
           }
@@ -62,6 +102,7 @@
         "endpointGroup": {
           "dynamic": {
             "config": {
+              "connectTimeout": "5s",
               "disablePanicThreshold": true
             },
             "outboundTls": {
@@ -74,7 +115,8 @@
                 "validationContext": {
                   "spiffeIds": [
                     "spiffe://foo.consul/ap/default/ns/default/identity/api1-identity"
-                  ]
+                  ],
+                  "trustBundlePeerNameKey": "local"
                 }
               }
             }
@@ -87,6 +129,7 @@
         "endpointGroup": {
           "dynamic": {
             "config": {
+              "connectTimeout": "5s",
               "disablePanicThreshold": true
             },
             "outboundTls": {
@@ -99,7 +142,8 @@
                 "validationContext": {
                   "spiffeIds": [
                     "spiffe://foo.consul/ap/default/ns/default/identity/api2-identity"
-                  ]
+                  ],
+                  "trustBundlePeerNameKey": "local"
                 }
               }
             }
@@ -191,6 +235,11 @@
             "routeRules": [
               {
                 "destination": {
+                  "destinationConfiguration": {
+                    "timeoutConfig": {
+                      "timeout": "77s"
+                    }
+                  },
                   "weightedClusters": {
                     "clusters": [
                       {
@@ -206,6 +255,27 @@
                         "weight": 10
                       }
                     ]
+                  }
+                },
+                "match": {
+                  "pathMatch": {
+                    "prefix": "/split"
+                  }
+                }
+              },
+              {
+                "destination": {
+                  "cluster": {
+                    "name": "http.api-1.default.dc1.internal.foo.consul"
+                  },
+                  "destinationConfiguration": {
+                    "retryPolicy": {
+                      "numRetries": 4,
+                      "retryOn": "connect-failure"
+                    },
+                    "timeoutConfig": {
+                      "timeout": "606s"
+                    }
                   }
                 },
                 "match": {
@@ -233,6 +303,22 @@
     }
   },
   "requiredEndpoints": {
+    "failover-target~0~http.api-1.default.dc1.internal.foo.consul": {
+      "id": {
+        "name": "backup-1",
+        "tenancy": {
+          "namespace": "default",
+          "partition": "default",
+          "peerName": "local"
+        },
+        "type": {
+          "group": "catalog",
+          "groupVersion": "v2beta1",
+          "kind": "ServiceEndpoints"
+        }
+      },
+      "port": "mesh"
+    },
     "http.api-1.default.dc1.internal.foo.consul": {
       "id": {
         "name": "api-1",
@@ -243,13 +329,26 @@
         },
         "type": {
           "group": "catalog",
-          "groupVersion": "v1alpha1",
+          "groupVersion": "v2beta1",
           "kind": "ServiceEndpoints"
         }
       },
       "port": "mesh"
     },
     "http.api-2.default.dc1.internal.foo.consul": {
+      "id": {
+        "name": "api-2",
+        "tenancy": {
+          "namespace": "default",
+          "partition": "default",
+          "peerName": "local"
+        },
+        "type": {
+          "group": "catalog",
+          "groupVersion": "v2beta1",
+          "kind": "ServiceEndpoints"
+        }
+      },
       "port": "mesh"
     },
     "tcp.api-1.default.dc1.internal.foo.consul": {
@@ -262,7 +361,7 @@
         },
         "type": {
           "group": "catalog",
-          "groupVersion": "v1alpha1",
+          "groupVersion": "v2beta1",
           "kind": "ServiceEndpoints"
         }
       },
@@ -278,7 +377,7 @@
         },
         "type": {
           "group": "catalog",
-          "groupVersion": "v1alpha1",
+          "groupVersion": "v2beta1",
           "kind": "ServiceEndpoints"
         }
       },

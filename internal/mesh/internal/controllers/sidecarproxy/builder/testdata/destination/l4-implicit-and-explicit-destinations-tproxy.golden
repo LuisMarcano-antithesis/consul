@@ -6,6 +6,7 @@
         "endpointGroup": {
           "dynamic": {
             "config": {
+              "connectTimeout": "5s",
               "disablePanicThreshold": true
             },
             "outboundTls": {
@@ -18,7 +19,8 @@
                 "validationContext": {
                   "spiffeIds": [
                     "spiffe://foo.consul/ap/default/ns/default/identity/api1-identity"
-                  ]
+                  ],
+                  "trustBundlePeerNameKey": "local"
                 }
               }
             }
@@ -31,6 +33,7 @@
         "endpointGroup": {
           "dynamic": {
             "config": {
+              "connectTimeout": "5s",
               "disablePanicThreshold": true
             },
             "outboundTls": {
@@ -43,7 +46,8 @@
                 "validationContext": {
                   "spiffeIds": [
                     "spiffe://foo.consul/ap/default/ns/default/identity/api2-identity"
-                  ]
+                  ],
+                  "trustBundlePeerNameKey": "local"
                 }
               }
             }
@@ -98,7 +102,7 @@
               "statPrefix": "upstream.tcp.api-2.default.default.dc1"
             },
             "match": {
-              "destinationPort": 8080,
+              "destinationPort": 7070,
               "prefixRanges": [
                 {
                   "addressPrefix": "2.2.2.2",
@@ -126,7 +130,7 @@
         },
         "type": {
           "group": "catalog",
-          "groupVersion": "v1alpha1",
+          "groupVersion": "v2beta1",
           "kind": "ServiceEndpoints"
         }
       },
@@ -142,7 +146,7 @@
         },
         "type": {
           "group": "catalog",
-          "groupVersion": "v1alpha1",
+          "groupVersion": "v2beta1",
           "kind": "ServiceEndpoints"
         }
       },

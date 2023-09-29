@@ -15,10 +15,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/hashicorp/consul/internal/catalog"
-	"github.com/hashicorp/consul/internal/mesh"
-	pbcatalog "github.com/hashicorp/consul/proto-public/pbcatalog/v1alpha1"
-	pbmesh "github.com/hashicorp/consul/proto-public/pbmesh/v1alpha1"
+	pbcatalog "github.com/hashicorp/consul/proto-public/pbcatalog/v2beta1"
+	pbmesh "github.com/hashicorp/consul/proto-public/pbmesh/v2beta1"
 	"github.com/hashicorp/consul/proto-public/pbresource"
 
 	"github.com/hashicorp/consul/acl"
@@ -59,9 +57,8 @@ func (s *Server) GetEnvoyBootstrapParams(ctx context.Context, req *pbdataplane.G
 			Tenancy: &pbresource.Tenancy{
 				Namespace: req.Namespace,
 				Partition: req.Partition,
-				PeerName:  "local",
 			},
-			Type: catalog.WorkloadType,
+			Type: pbcatalog.WorkloadType,
 		}
 		workloadRsp, err := s.ResourceAPIClient.Read(ctx, &pbresource.ReadRequest{
 			Id: workloadId,
@@ -69,6 +66,7 @@ func (s *Server) GetEnvoyBootstrapParams(ctx context.Context, req *pbdataplane.G
 		if err != nil {
 			// This error should already include the gRPC status code and so we don't need to wrap it
 			// in status.Error.
+			logger.Error("Error looking up workload", "error", err)
 			return nil, err
 		}
 		var workload pbcatalog.Workload
@@ -90,9 +88,10 @@ func (s *Server) GetEnvoyBootstrapParams(ctx context.Context, req *pbdataplane.G
 
 		proxyCfgList, err := s.ResourceAPIClient.List(ctx, &pbresource.ListRequest{
 			Tenancy: workloadRsp.Resource.Id.GetTenancy(),
-			Type:    mesh.ProxyConfigurationType,
+			Type:    pbmesh.ProxyConfigurationType,
 		})
 		if err != nil {
+			logger.Error("Error looking up proxyConfiguration", "error", err)
 			return nil, err
 		}
 

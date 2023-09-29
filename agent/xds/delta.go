@@ -33,10 +33,10 @@ import (
 	"github.com/hashicorp/consul/agent/xdsv2"
 	"github.com/hashicorp/consul/envoyextensions/extensioncommon"
 	"github.com/hashicorp/consul/envoyextensions/xdscommon"
-	"github.com/hashicorp/consul/internal/mesh"
 	proxysnapshot "github.com/hashicorp/consul/internal/mesh/proxy-snapshot"
 	proxytracker "github.com/hashicorp/consul/internal/mesh/proxy-tracker"
 	"github.com/hashicorp/consul/logging"
+	pbmesh "github.com/hashicorp/consul/proto-public/pbmesh/v2beta1"
 	"github.com/hashicorp/consul/proto-public/pbresource"
 	"github.com/hashicorp/consul/version"
 )
@@ -116,7 +116,13 @@ func getEnvoyConfiguration(proxySnapshot proxysnapshot.ProxySnapshot, logger hcl
 		)
 		c := proxySnapshot.(*proxytracker.ProxyState)
 		logger.Trace("ProxyState", c)
-		return generator.AllResourcesFromIR(c)
+		resources, err := generator.AllResourcesFromIR(c)
+		if err != nil {
+			logger.Error("error generating resources from proxy state template", "err", err)
+			return nil, err
+		}
+		logger.Trace("generated resources from proxy state template", "resources", resources)
+		return resources, nil
 	default:
 		return nil, errors.New("proxysnapshot must be of type ProxyState or ConfigSnapshot")
 	}
@@ -428,9 +434,8 @@ func newResourceIDFromEnvoyNode(node *envoy_config_core_v3.Node) *pbresource.ID 
 		Tenancy: &pbresource.Tenancy{
 			Namespace: entMeta.NamespaceOrDefault(),
 			Partition: entMeta.PartitionOrDefault(),
-			PeerName:  "local",
 		},
-		Type: mesh.ProxyStateTemplateV1AlphaType,
+		Type: pbmesh.ProxyStateTemplateType,
 	}
 }
 

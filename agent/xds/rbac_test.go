@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/consul/acl"
 	"github.com/hashicorp/consul/agent/structs"
 	"github.com/hashicorp/consul/agent/xdsv2"
-	"github.com/hashicorp/consul/proto-public/pbmesh/v1alpha1/pbproxystate"
+	"github.com/hashicorp/consul/proto-public/pbmesh/v2beta1/pbproxystate"
 	"github.com/hashicorp/consul/proto/private/pbpeering"
 )
 
@@ -765,6 +765,17 @@ func TestMakeRBACNetworkAndHTTPFilters(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		// This validates that we don't send xDS messages to Envoy that will fail validation.
+		// Traffic permissions validations prevent this from being written to the IR, so the thing
+		// that matters is that the snapshot is valid to Envoy.
+		"v2-ignore-empty-permissions": {
+			intentionDefaultAllow: true,
+			v2L4TrafficPermissions: &pbproxystate.TrafficPermissions{
+				DenyPermissions: []*pbproxystate.Permission{
+					{},
 				},
 			},
 		},
