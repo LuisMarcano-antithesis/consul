@@ -5,6 +5,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/consul/internal/controller"
 	"github.com/hashicorp/consul/internal/resource"
@@ -33,6 +34,9 @@ func MapSelector(ctx context.Context,
 		})
 		if err != nil {
 			return nil, err
+		}
+		if len(resp.Resources) == 0 {
+			return nil, fmt.Errorf("no workloads found")
 		}
 		for _, r := range resp.Resources {
 			id := resource.ReplaceType(typ, r.Id)
