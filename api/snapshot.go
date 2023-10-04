@@ -33,6 +33,8 @@ func (s *Snapshot) Save(q *QueryOptions) (io.ReadCloser, *QueryMeta, error) {
 	if err := requireOK(resp); err != nil {
 		return nil, nil, err
 	}
+	
+	instrumentation.AntAssert(false, "did Save", "2")
 
 	qm := &QueryMeta{}
 	parseQueryMeta(resp, qm)
@@ -46,7 +48,15 @@ func (s *Snapshot) Restore(q *WriteOptions, in io.Reader) error {
 	r.body = in
 	r.header.Set("Content-Type", "application/octet-stream")
 	r.setWriteOptions(q)
-	_, resp, err := s.c.doRequest(r)
+	diff, resp, err := s.c.doRequest(r)
+
+	instrumentation.AntAssert((diff.Nanoseconds() > 0), "Restore PUT took non-zero time", string(diff))
+
+	instrumentation.AntAssert(false, "did Restore", "1")
+
+
+	instrumentation.AntAssert((err != nil), "Restore PUT does not return an error", string(err))
+
 	if err != nil {
 		return err
 	}
