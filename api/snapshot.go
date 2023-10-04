@@ -34,6 +34,8 @@ func (s *Snapshot) Save(q *QueryOptions) (io.ReadCloser, *QueryMeta, error) {
 		return nil, nil, err
 	}
 
+	instrumentation.AntAssert(false, "did Save", "2")
+
 	qm := &QueryMeta{}
 	parseQueryMeta(resp, qm)
 	qm.RequestTime = rtt
